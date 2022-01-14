@@ -41,10 +41,8 @@ public class ReaderJsonService {
 			String pathFile = filename;
 
 			ObjectMapper objectMapper = new ObjectMapper();
-			DataSourceModel dataSource = objectMapper.readValue(new ClassPathResource(pathFile).getInputStream(),
-					DataSourceModel.class);
-			// DataSourceModel dataSource = objectMapper.readValue(new File(pathFile),
-			// DataSourceModel.class);
+			DataSourceModel dataSource = objectMapper.readValue(new ClassPathResource(pathFile).getInputStream(), DataSourceModel.class);
+			// DataSourceModel dataSource = objectMapper.readValue(new File(pathFile), DataSourceModel.class);
 
 			List<Person> listPersons = dataSource.getPersons();
 			personRepository.saveAll(listPersons);
@@ -55,12 +53,9 @@ public class ReaderJsonService {
 			List<MedicalRecord> listMedicalRecords = dataSource.getMedicalrecords();
 			medicalRecordRepository.saveAll(listMedicalRecords);
 
-			// System.out.println("Persons : " + listPersons.size() + " entries ==> " +
-			// listPersons);
-			// System.out.println("FireStations : " + listFireStations.size() + " entries
-			// ==> " + listFireStations);
-			// System.out.println("MedicalRecords : " + listMedicalRecords.size() + "
-			// entries ==> " + listMedicalRecords);
+			// System.out.println("Persons : " + listPersons.size() + " entries ==> " + listPersons);
+			// System.out.println("FireStations : " + listFireStations.size() + " entries ==> " + listFireStations);
+			// System.out.println("MedicalRecords : " + listMedicalRecords.size() + " entries ==> " + listMedicalRecords);
 
 		} catch (Exception e) {
 			logger.error("ReaderJsonService Error loading data in SaveJsonDataInDb method", e);

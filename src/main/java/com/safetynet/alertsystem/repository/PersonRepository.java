@@ -11,15 +11,16 @@ import com.safetynet.alertsystem.model.Person;
 @Repository
 public interface PersonRepository extends CrudRepository<Person, Long> {
 
+	// for CRUD operations POST, PUT and DELETE
 	Optional<Person> findPersonByFirstNameAndLastName(String firstName, String lastName);
 
 	// for endpoint 7
 	List<Person> findPersonByCity(String city);
 
-	// for endpoint 3 and endpoint 4
+	// for endpoint 3, endpoint 1, endpoint 2, endpoint 4 and endpoint 5
 	List<Person> findPersonByAddress(String address);
-
-	// for endpoint 6, endpoint 1 and endpoint 5
-	List<Person> findPersonInfoByFirstNameAndLastName(String firstName, String lastName);
+	
+	// for endpoint 6
+	List<Person> findPersonByLastName(String lastName);
 
 }

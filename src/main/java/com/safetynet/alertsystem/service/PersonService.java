@@ -18,6 +18,7 @@ public class PersonService {
 	@Autowired
 	private PersonRepository personRepository;
 
+
 	// GET all
 	public Iterable<Person> getAllPersons() {
 		try {
@@ -28,11 +29,14 @@ public class PersonService {
 		return null;
 	}
 
+
+
+
+
 	// POST
 	public Optional<Person> addPerson(Person person) {
 		try {
-			Optional<Person> personToCreate = personRepository.findPersonByFirstNameAndLastName(person.getFirstName(),
-					person.getLastName());
+			Optional<Person> personToCreate = personRepository.findPersonByFirstNameAndLastName(person.getFirstName(), person.getLastName());
 			if (personToCreate.isPresent()) {
 				return Optional.empty();
 			}
@@ -43,11 +47,14 @@ public class PersonService {
 		return Optional.of(person);
 	}
 
+
+
+
+
 	// PUT
 	public Optional<Person> updatePerson(Person person) {
 		try {
-			Optional<Person> personToUpdate = personRepository.findPersonByFirstNameAndLastName(person.getFirstName(),
-					person.getLastName());
+			Optional<Person> personToUpdate = personRepository.findPersonByFirstNameAndLastName(person.getFirstName(), person.getLastName());
 
 			if (personToUpdate.isPresent()) {
 				Person personUpdated = personToUpdate.get();
@@ -67,12 +74,17 @@ public class PersonService {
 		return Optional.empty();
 	}
 
+
+
+
+
 	// DELETE
 	public boolean deletePerson(String firstName, String lastName) {
 		try {
 			Optional<Person> personToDelete = personRepository.findPersonByFirstNameAndLastName(firstName, lastName);
 			if (personToDelete.isPresent()) {
 				Person personDeleted = personToDelete.get();
+				
 				personRepository.delete(personDeleted);
 				return true;
 			}

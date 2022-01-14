@@ -1,9 +1,10 @@
 package com.safetynet.alertsystem.service;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.LogManager;
@@ -11,22 +12,15 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import com.safetynet.alertsystem.model.ChildAlert;
-import com.safetynet.alertsystem.model.ChildAlertResponse;
 import com.safetynet.alertsystem.model.FireStation;
-import com.safetynet.alertsystem.model.FireStationPersonList;
-import com.safetynet.alertsystem.model.Household;
-import com.safetynet.alertsystem.model.HouseholdResponse;
 import com.safetynet.alertsystem.model.MedicalRecord;
 import com.safetynet.alertsystem.model.Person;
-import com.safetynet.alertsystem.model.PersonCoveredByFireStation;
-import com.safetynet.alertsystem.model.PersonForFireStationAddress;
-import com.safetynet.alertsystem.model.PersonForFireStationAddressResponse;
-import com.safetynet.alertsystem.model.PersonForFlood;
-import com.safetynet.alertsystem.model.PersonInfo;
+import com.safetynet.alertsystem.model.PersonDetails;
 import com.safetynet.alertsystem.repository.FireStationRepository;
 import com.safetynet.alertsystem.repository.MedicalRecordRepository;
 import com.safetynet.alertsystem.repository.PersonRepository;
+import com.safetynet.alertsystem.util.CalculateUtil;
+import com.safetynet.alertsystem.util.ConstantsUtil;
 
 @Service
 public class MainAlertsService {
@@ -42,9 +36,7 @@ public class MainAlertsService {
 	@Autowired
 	private MedicalRecordRepository medicalRecordRepository;
 
-	@Autowired
-	private MedicalRecordService medicalRecordService;
-
+	
 	// ========== Endpoint url 7 ======================
 	// http://localhost:8080/communityEmail?city=<city>
 	// ================================================
@@ -60,8 +52,9 @@ public class MainAlertsService {
 
 		for (Person person : personsLivingInThisCity) {
 			String currentPersonEmail = person.getEmail();
-			if (!emailsListOfPersonsLivingInThisCity.contains(currentPersonEmail)) { // check email not already added
-				emailsListOfPersonsLivingInThisCity.add(currentPersonEmail); // add email
+			// Check if email is not already added to avoid duplicates
+			if (!emailsListOfPersonsLivingInThisCity.contains(currentPersonEmail)) {
+				emailsListOfPersonsLivingInThisCity.add(currentPersonEmail);
 			}
 		}
 
@@ -69,28 +62,31 @@ public class MainAlertsService {
 
 		return emailsListOfPersonsLivingInThisCity;
 	}
-
+	
+	
+	
+	
+	
 	// ========== Endpoint url 3 =======================================
 	// http://localhost:8080/phoneAlert?firestation=<firestation_number>
 	// =================================================================
 	public List<String> getPhonesOfPersonsCoveredByFireStation(String firestationNumber) {
 		logger.debug("Entered into MainService.getPhonesOfPersonsCoveredByFireStation method");
 
-		List<FireStation> fireStationsInfosOfThisStation = fireStationRepository
-				.findFireStationByStation(firestationNumber);
+		List<FireStation> addressesCoveredByStationNumber = fireStationRepository.findFireStationByStation(firestationNumber);
 		List<String> phonesOfPersonsCoveredByThisFireStation = new ArrayList<String>();
 
-		if (fireStationsInfosOfThisStation.isEmpty()) {
+		if (addressesCoveredByStationNumber.isEmpty()) {
 			return phonesOfPersonsCoveredByThisFireStation;
 		}
 
-		for (FireStation fireStation : fireStationsInfosOfThisStation) {
+		for (FireStation fireStation : addressesCoveredByStationNumber) {
 			List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(fireStation.getAddress());
 			for (Person person : personsLivingAtThisAddress) {
 				String currentPersonPhone = person.getPhone();
-				if (!phonesOfPersonsCoveredByThisFireStation.contains(currentPersonPhone)) { // check phone not already
-																								// added
-					phonesOfPersonsCoveredByThisFireStation.add(currentPersonPhone); // add phone
+				// Check if phone is not already added to avoid duplicates
+				if (!phonesOfPersonsCoveredByThisFireStation.contains(currentPersonPhone)) {
+					phonesOfPersonsCoveredByThisFireStation.add(currentPersonPhone);
 				}
 			}
 		}
@@ -99,250 +95,272 @@ public class MainAlertsService {
 
 		return phonesOfPersonsCoveredByThisFireStation;
 	}
-
+	
+	
+	
+	
+	
 	// ========== Endpoint url 6 ================================================
 	// http://localhost:8080/personInfo?firstName=<firstName>&lastName=<lastName>
 	// ==========================================================================
-	public List<PersonInfo> getInfoOfPerson(String firstName, String lastName) {
-
+	public List<PersonDetails> getInfoOfPerson(String firstName, String lastName) {
 		logger.debug("Entered into MainService.getInfoOfPerson method");
 
-		List<Person> personsWithThisFullName = personRepository.findPersonInfoByFirstNameAndLastName(firstName,
-				lastName);
-		List<PersonInfo> personInfoOfThisPerson = new ArrayList<PersonInfo>();
+		List<Person> personsWithTheSameLastName = personRepository.findPersonByLastName(lastName);
+		List<PersonDetails> personalInfosOfThesePersons = new ArrayList<PersonDetails>();
 
-		if (personsWithThisFullName.isEmpty()) {
-			return personInfoOfThisPerson;
+		if (personsWithTheSameLastName.isEmpty()) {
+			return personalInfosOfThesePersons;
 		}
 
-		for (Person p : personsWithThisFullName) {
-			PersonInfo personInfoToGetFrom = new PersonInfo();
-			MedicalRecord medicalRecordInfoOfThisPerson = null;
-			int age;
-			List<String> medications;
-			List<String> allergies;
+		for (Person person : personsWithTheSameLastName) {
+			PersonDetails personToGetInfoFrom = new PersonDetails();
+			
+			MedicalRecord medicalRecordOfCurrentPerson = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(person.getFirstName(), person.getLastName());
 
-			medicalRecordInfoOfThisPerson = medicalRecordService.getMedicalRecordInfoOfPerson(p.getFirstName(),
-					p.getLastName());
-			age = medicalRecordService.getAgeOf(p.getFirstName(), p.getLastName());
-			medications = medicalRecordInfoOfThisPerson.getMedications();
-			allergies = medicalRecordInfoOfThisPerson.getAllergies();
+			personToGetInfoFrom.setFirstName(person.getFirstName());
+			personToGetInfoFrom.setLastName(person.getLastName());
+			personToGetInfoFrom.setAddress(person.getAddress());
+			personToGetInfoFrom.setEmail(person.getEmail());
+			
+			personToGetInfoFrom.setMedications(medicalRecordOfCurrentPerson.getMedications());
+			personToGetInfoFrom.setAllergies(medicalRecordOfCurrentPerson.getAllergies());
+			
+			personToGetInfoFrom.setAge(CalculateUtil.calculateAgeByBirthDate(medicalRecordOfCurrentPerson.getBirthdate()));
 
-			personInfoToGetFrom.setFirstName(p.getFirstName());
-			personInfoToGetFrom.setLastName(p.getLastName());
-			personInfoToGetFrom.setAddress(p.getAddress());
-			personInfoToGetFrom.setAge(age);
-			personInfoToGetFrom.setEmail(p.getEmail());
-			personInfoToGetFrom.setMedications(medications);
-			personInfoToGetFrom.setAllergies(allergies);
-
-			personInfoOfThisPerson.add(personInfoToGetFrom);
+			personalInfosOfThesePersons.add(personToGetInfoFrom);
 		}
 
 		logger.debug("Leaving MainService.getInfoOfPerson method");
 
-		return personInfoOfThisPerson;
-
+		return personalInfosOfThesePersons;
 	}
-
+	
+	
+	
+	
+	
 	// ========== Endpoint url 1 ======================================
 	// http://localhost:8080/firestation?stationNumber=<station_number>
 	// ================================================================
-	public FireStationPersonList getCoveredPersonsOfFireStation(String stationNumber) {
+	public Map<Map<String, String>, List<PersonDetails>> getCoveredPersonsOfFireStation(String stationNumber) {
 
 		logger.debug("Entered into MainService.getCoveredPersonsOfFireStation method");
 
-		List<FireStation> fireStationsContainingThisStationNumber = fireStationRepository
-				.findFireStationByStation(stationNumber);
-		List<PersonCoveredByFireStation> personsListCoveredByThisStationNumber = new ArrayList<>();
+		List<FireStation> fireStationsContainingThisStationNumber = fireStationRepository.findFireStationByStation(stationNumber);
+		List<PersonDetails> personsCoveredByThisStationNumber = new ArrayList<PersonDetails>();
 
-		MedicalRecord medicalRecordOfPersonCoveredByFireStation;
 		int nbOfAdults = 0;
 		int nbOfChildren = 0;
-		int age;
-
-		FireStationPersonList fireStationPersonListCoveredByStation = new FireStationPersonList();
-
-		if (fireStationsContainingThisStationNumber.isEmpty()) {
-			return fireStationPersonListCoveredByStation;
-		}
 
 		// Retrieve list of persons covered by fire station number ...
-		for (FireStation fs : fireStationsContainingThisStationNumber) {
-			List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(fs.getAddress());
-			for (Person psn : personsLivingAtThisAddress) {
-				PersonCoveredByFireStation personCoveredByFireStation = new PersonCoveredByFireStation();
-				personCoveredByFireStation.setFirstName(psn.getFirstName());
-				personCoveredByFireStation.setLastName(psn.getLastName());
-				personCoveredByFireStation.setAddress(psn.getAddress());
-				personCoveredByFireStation.setPhone(psn.getPhone());
-
-				if (!personsListCoveredByThisStationNumber.contains(personCoveredByFireStation)) { // check if not
-																									// already added
-					personsListCoveredByThisStationNumber.add(personCoveredByFireStation); // add it
-				}
+		for (FireStation fireStation : fireStationsContainingThisStationNumber) {
+			
+			List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(fireStation.getAddress());
+			
+			for (Person person : personsLivingAtThisAddress) {
+				
+				MedicalRecord medicalRecordOfCurrentPersonCoveredByFireStation = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(person.getFirstName(), person.getLastName());
+				PersonDetails personCoveredByFireStation = new PersonDetails();
+				
+				personCoveredByFireStation.setFirstName(person.getFirstName());
+				personCoveredByFireStation.setLastName(person.getLastName());
+				personCoveredByFireStation.setAddress(person.getAddress());
+				personCoveredByFireStation.setPhone(person.getPhone());
+				personCoveredByFireStation.setAge(CalculateUtil.calculateAgeByBirthDate(medicalRecordOfCurrentPersonCoveredByFireStation.getBirthdate()));
+				
+				personsCoveredByThisStationNumber.add(personCoveredByFireStation);
 
 			}
+			
 		}
+		
+		// ... then count number of adults and number of children from this list
+		for (PersonDetails personDetails : personsCoveredByThisStationNumber) {
+			
+			MedicalRecord medicalRecordOfCurrentPersonDetails = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(personDetails.getFirstName(), personDetails.getLastName());
 
-		// ... then check for each person covered by this fire station number list if
-		// it's an adult (more than 19) or a child
-		for (PersonCoveredByFireStation p : personsListCoveredByThisStationNumber) {
-			medicalRecordOfPersonCoveredByFireStation = medicalRecordService
-					.getMedicalRecordInfoOfPerson(p.getFirstName(), p.getLastName());
-			if (medicalRecordOfPersonCoveredByFireStation != null) {
-				age = medicalRecordService.getAgeOf(p.getFirstName(), p.getLastName());
-				if (age > 19) {
-					nbOfAdults++;
-				} else {
+			if(medicalRecordOfCurrentPersonDetails != null) {
+				int age = CalculateUtil.calculateAgeByBirthDate(medicalRecordOfCurrentPersonDetails.getBirthdate());
+				if(age <= ConstantsUtil.AGE_MAX_OF_CHILDREN) {
 					nbOfChildren++;
+				} else {
+					nbOfAdults++;
 				}
 			}
+			
 		}
-
-		fireStationPersonListCoveredByStation.setNbOfAdults(nbOfAdults);
-		fireStationPersonListCoveredByStation.setNbOfChildren(nbOfChildren);
-		fireStationPersonListCoveredByStation.setPersonsCoveredByFireStation(personsListCoveredByThisStationNumber);
-
+	
+		Map<String, String> numberOfAdultsAndChildrenMap = new HashMap<String, String>();
+		numberOfAdultsAndChildrenMap.put("NumberOfAdults", String.valueOf(nbOfAdults));
+		numberOfAdultsAndChildrenMap.put("NumberOfChildren", String.valueOf(nbOfChildren));
+		
+		Map<Map<String, String>, List<PersonDetails>> firestationDetailsResponse = new HashMap<Map<String, String>, List<PersonDetails>>();
+		firestationDetailsResponse.put(numberOfAdultsAndChildrenMap, personsCoveredByThisStationNumber);
+		
 		logger.debug("Leaving MainService.getCoveredPersonsOfFireStation method");
 
-		return fireStationPersonListCoveredByStation;
+		return firestationDetailsResponse;
 	}
+	
 
+	
+
+	
 	// ========== Endpoint url 2 ========================
 	// http://localhost:8080/childAlert?address=<address>
 	// ==================================================
-	public ChildAlertResponse getChildrenLivingAtAddress(String address) {
-		// Recherche des enfants
-		ChildAlertResponse childAlertResponse = new ChildAlertResponse();
-		List<ChildAlert> childAlerts = new ArrayList<>();
-		List<Person> otherPersonsLivingAtThisAddress;
-		ChildAlert childAlert;
+	public List<List<PersonDetails>> getChildrenLivingAtAddress(String address) {
+		
+		logger.debug("Entered into MainService.getChildrenLivingAtAddress method");
 
-		// Recherche des medical records de même nom/prenom et <= 18 ans
-		for (MedicalRecord mr : medicalRecordRepository.findAll()) {
-			if (medicalRecordService.countAgeOf(mr) < 19
-					&& personRepository.findPersonByFirstNameAndLastName(mr.getFirstName(), mr.getLastName()) != null
-					&& personRepository.findPersonByFirstNameAndLastName(mr.getFirstName(), mr.getLastName()).get()
-							.getAddress().equals(address)) {
-				otherPersonsLivingAtThisAddress = new ArrayList<>();
-				childAlert = new ChildAlert();
-				childAlert.setFirstName(mr.getFirstName());
-				childAlert.setLastName(mr.getLastName());
-				childAlert.setAge(medicalRecordService.countAgeOf(mr));
-
-				// Recherche des membres habitants à cette adresse
-				for (Person psn : personRepository.findAll()) {
-					if (psn.getAddress().equals(address) && !(psn.getFirstName().equals(mr.getFirstName())
-							&& psn.getLastName().equals(mr.getLastName()))) {
-						otherPersonsLivingAtThisAddress.add(psn);
-					}
-				}
-				childAlert.setPersons(otherPersonsLivingAtThisAddress);
-				childAlerts.add(childAlert);
+		List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(address);
+		List<PersonDetails> childrenList = new ArrayList<>();
+		List<PersonDetails> otherHouseholdMembers = new ArrayList<>();
+		
+		for(Person person : personsLivingAtThisAddress) {
+			
+			PersonDetails childDetails = new PersonDetails();
+			PersonDetails otherMemberDetails = new PersonDetails();
+			
+			MedicalRecord medicalRecordOfCurrentPerson = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(person.getFirstName(), person.getLastName());
+			int age = CalculateUtil.calculateAgeByBirthDate(medicalRecordOfCurrentPerson.getBirthdate());
+			
+			if(age <= ConstantsUtil.AGE_MAX_OF_CHILDREN) {
+				
+				childDetails.setFirstName(person.getFirstName());
+				childDetails.setLastName(person.getLastName());
+				childDetails.setAge(age);
+				
+				childrenList.add(childDetails);
+				
+			} else {
+				
+				otherMemberDetails.setFirstName(person.getFirstName());
+				otherMemberDetails.setLastName(person.getLastName());
+				otherMemberDetails.setAge(age);
+				
+				otherHouseholdMembers.add(otherMemberDetails);			
 			}
 		}
-		childAlertResponse.setChildAlerts(childAlerts);
-		return childAlertResponse;
+		
+		List<List<PersonDetails>> childAlertDetailsResponse = new ArrayList<>();
+		childAlertDetailsResponse.add(childrenList);
+		childAlertDetailsResponse.add(otherHouseholdMembers);
+		
+		logger.debug("Leaving MainService.getChildrenLivingAtAddress method");
+		
+		return childAlertDetailsResponse;
 	}
-
+	
+	
+	
+	
+	
 	// ========== Endpoint url 4 ==================
 	// http://localhost:8080/fire?address=<address>
 	// ============================================
-	public PersonForFireStationAddressResponse fire(String address) {
-		PersonForFireStationAddressResponse personForFireStationAddressResponse = new PersonForFireStationAddressResponse();
-		List<PersonForFireStationAddress> listPersonsForFireStationAddress = new ArrayList<>();
-		FireStation fireStation;
-		MedicalRecord medicalRecord;
-		PersonForFireStationAddress personForFireStationAddress;
-		int age;
-		for (Person psn : personRepository.findPersonByAddress(address)) {
-			personForFireStationAddress = new PersonForFireStationAddress();
-			personForFireStationAddress.setFirstname(psn.getFirstName());
-			personForFireStationAddress.setLastname(psn.getLastName());
-			personForFireStationAddress.setAddress(psn.getAddress());
-			personForFireStationAddress.setPhone(psn.getPhone());
-			fireStation = fireStationRepository.findFsByAddress(psn.getAddress());
-			if (fireStation != null) {
-				personForFireStationAddress.setStation(fireStation.getStation());
+	public Map<Set<String>, List<PersonDetails>> getPersonsLivingAtThisCoveringAddress(String address) {
+		
+		logger.debug("Entered into MainService.getPersonsLivingAtThisCoveringAddress method");
+	
+		Set<String> stationsNumberCoveringThisAddress = new HashSet<>();
+		List<PersonDetails> personsDetailsForThisAddress = new ArrayList<>();
+		
+		
+		List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(address);
+		
+		for (Person psn : personsLivingAtThisAddress) {
+			
+			PersonDetails personLivingAtThisAddress = new PersonDetails();
+			personLivingAtThisAddress.setFirstName(psn.getFirstName());
+			personLivingAtThisAddress.setLastName(psn.getLastName());
+			personLivingAtThisAddress.setPhone(psn.getPhone());
+			personLivingAtThisAddress.setAddress(psn.getAddress());
+			
+			
+			MedicalRecord medicalRecordOfCurrentPerson = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(psn.getFirstName(), psn.getLastName());
+			
+			if (medicalRecordOfCurrentPerson != null) {			
+				personLivingAtThisAddress.setAge(CalculateUtil.calculateAgeByBirthDate(medicalRecordOfCurrentPerson.getBirthdate()));
+				personLivingAtThisAddress.setMedications(medicalRecordOfCurrentPerson.getMedications());
+				personLivingAtThisAddress.setAllergies(medicalRecordOfCurrentPerson.getAllergies());
 			}
-			medicalRecord = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(psn.getFirstName(),
-					psn.getLastName());
-			if (medicalRecord != null) {
-				age = medicalRecordService.countAgeOf(medicalRecord);
-				personForFireStationAddress.setAge(age);
-				personForFireStationAddress.setMedications(medicalRecord.getMedications());
-				personForFireStationAddress.setAllergies(medicalRecord.getAllergies());
+			
+			
+			List<FireStation> fireStationsCoveringThisAddress = fireStationRepository.findDistinctByAddress(psn.getAddress());
+			
+			if (fireStationsCoveringThisAddress != null) {
+				for (FireStation fs : fireStationsCoveringThisAddress) {
+					stationsNumberCoveringThisAddress.add("station " + fs.getStation());
+				}
 			}
-			listPersonsForFireStationAddress.add(personForFireStationAddress);
+			
+			personsDetailsForThisAddress.add(personLivingAtThisAddress);
+			
 		}
-		personForFireStationAddressResponse.setPersonForFireStationAddress(listPersonsForFireStationAddress);
-		return personForFireStationAddressResponse;
+		
+		Map<Set<String>, List<PersonDetails>> fireDetailsResponse = new HashMap<>();
+		fireDetailsResponse.put(stationsNumberCoveringThisAddress, personsDetailsForThisAddress);
+		
+		logger.debug("Leaving MainService.getPersonsLivingAtThisCoveringAddress method");
+		
+		return fireDetailsResponse;
 	}
-
+	
+	
+	
+	
+	
 	// ========== Endpoint url 5 ===============================================
 	// http://localhost:8080/flood/stations?stations=<a list of station_numbers>
 	// =========================================================================
-	public HouseholdResponse floodStations(List<String> stations) {
-		HouseholdResponse householdresponse = new HouseholdResponse();
-		List<Household> households = new ArrayList<>();
-		Household household;
-		String address;
-
-		// On charge un Set des adresses des firestations
-		Set<String> setAddress = getAddressStations(stations);
-
-		// On parcourt le Set des adresses
-		Iterator<String> addr = setAddress.iterator();
-		while (addr.hasNext()) {
-			address = addr.next();
-			List<Person> persons = personRepository.findPersonByAddress(address);
-			if (persons != null && persons.size() > 0) {
-				household = new Household();
-				household.setAddress(address);
-				List<PersonForFlood> personForFloods = getPersonForFlood(persons);
-				household.setPersonsForFlood(personForFloods);
-				households.add(household);
+	public Map<String, List<PersonDetails>> getFloodStationsCovering(List<String> stationsNumbers) {
+		
+		logger.debug("Entered into MainService.floodStations method");
+		
+		Map<String, List<PersonDetails>> floodPersonsResponse = new HashMap<>();
+		
+		for (String station : stationsNumbers) {
+			List<FireStation> fireStationsContainingThisStationNumber = fireStationRepository.findFireStationByStation(station);
+			
+			if(!fireStationsContainingThisStationNumber.isEmpty()) {
+				for(FireStation fs : fireStationsContainingThisStationNumber) {
+					List<Person> personsLivingAtThisAddress = personRepository.findPersonByAddress(fs.getAddress());
+					List<PersonDetails> houseHoldMembersList = getPersonsForFlood(personsLivingAtThisAddress);
+					
+					floodPersonsResponse.put(fs.getAddress(), houseHoldMembersList);
+				}
 			}
-		}
-		householdresponse.setHouseholds(households);
-		return householdresponse;
+		}	
+		
+		logger.debug("Leaving MainService.floodStations method");
+		
+		return floodPersonsResponse;
 	}
-
-	// Chargement dans une set des adresses des firestations (pour éviter les
-	// doublons)
-	private Set<String> getAddressStations(List<String> stations) {
-		logger.debug("getAddressStations");
-		Set<String> setAddresses = new HashSet<>();
-		for (String station : stations) {
-			List<FireStation> address = fireStationRepository.findFireStationByStation(station);
-			for (FireStation addr : address) {
-				setAddresses.add(addr.getAddress());
-			}
+	
+	
+	private List<PersonDetails> getPersonsForFlood(List<Person> personsLivingAtSameAddress) {
+		
+		List<PersonDetails> personsListForFlood = new ArrayList<>();
+		
+		for (Person psn : personsLivingAtSameAddress) {
+			
+			PersonDetails houseHoldMember = new PersonDetails();
+			
+			MedicalRecord mr = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(psn.getFirstName(), psn.getLastName());
+			
+			houseHoldMember.setFirstName(psn.getFirstName());
+			houseHoldMember.setLastName(psn.getLastName());
+			houseHoldMember.setPhone(psn.getPhone());
+			houseHoldMember.setAge(CalculateUtil.calculateAgeByBirthDate(mr.getBirthdate()));
+			houseHoldMember.setMedications(mr.getMedications());
+			houseHoldMember.setAllergies(mr.getAllergies());
+			
+			personsListForFlood.add(houseHoldMember);
 		}
-		return setAddresses;
-	}
-
-	private List<PersonForFlood> getPersonForFlood(List<Person> persons) {
-		logger.debug("getPersonForFlood");
-		List<PersonForFlood> personsForFlood = new ArrayList<>();
-		PersonForFlood personForFlood;
-		MedicalRecord medicalRecord;
-		for (Person psn : persons) {
-			personForFlood = new PersonForFlood();
-			personForFlood.setFirstName(psn.getFirstName());
-			personForFlood.setLastName(psn.getLastName());
-			personForFlood.setPhone(psn.getPhone());
-			medicalRecord = medicalRecordRepository.findMedicalRecordInfoByFirstNameAndLastName(psn.getFirstName(),
-					psn.getLastName());
-			if (medicalRecord != null) {
-				personForFlood.setAge(medicalRecordService.countAgeOf(medicalRecord));
-				personForFlood.setMedications(medicalRecord.getMedications());
-				personForFlood.setAllergies(medicalRecord.getAllergies());
-			}
-			personsForFlood.add(personForFlood);
-		}
-		return personsForFlood;
+		
+		return personsListForFlood;
 	}
 
 }

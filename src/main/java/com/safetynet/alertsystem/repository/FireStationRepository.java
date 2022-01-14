@@ -14,13 +14,13 @@ public interface FireStationRepository extends CrudRepository<FireStation, Long>
 	// for CRUD operation DELETE by station
 	Optional<List<FireStation>> findByStation(String stationNumber);
 
-	// for CRUD operation POST, PUT, DELETE by address
+	// for CRUD operations POST, PUT and DELETE by address
 	Optional<FireStation> findByAddress(String address);
 
-	// for endpoint 3 and endpoint 1
+	// for endpoint 3, endpoint 1 and endpoint 5
 	List<FireStation> findFireStationByStation(String stationNumber);
 
 	// for endpoint 4
-	FireStation findFsByAddress(String Address);
+	List<FireStation> findDistinctByAddress(String Address);
 
 }

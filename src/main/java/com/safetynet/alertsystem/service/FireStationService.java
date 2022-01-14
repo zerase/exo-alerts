@@ -19,6 +19,7 @@ public class FireStationService {
 	@Autowired
 	private FireStationRepository fireStationRepository;
 
+
 	// GET all
 	public Iterable<FireStation> getAllFireStations() {
 		try {
@@ -26,14 +27,17 @@ public class FireStationService {
 		} catch (Exception e) {
 			logger.error("Error attempting to get fire stations", e);
 		}
-		return fireStationRepository.findAll();
+		return null;
 	}
+
+
+
+
 
 	// POST
 	public Optional<FireStation> addFireStationAndAddressMapping(FireStation fireStation) {
 		try {
-			Optional<FireStation> isFireStationAddressAlreadyExist = fireStationRepository
-					.findByAddress(fireStation.getAddress());
+			Optional<FireStation> isFireStationAddressAlreadyExist = fireStationRepository.findByAddress(fireStation.getAddress());
 			if (isFireStationAddressAlreadyExist.isEmpty()) {
 				fireStationRepository.save(fireStation);
 				return Optional.of(fireStation);
@@ -43,6 +47,10 @@ public class FireStationService {
 		}
 		return Optional.empty();
 	}
+
+
+
+
 
 	// PUT
 	public Optional<FireStation> updateFireStationNumberOfAnAddress(FireStation fireStation) {
@@ -63,12 +71,17 @@ public class FireStationService {
 		return Optional.empty();
 	}
 
+
+
+
+
 	// DELETE by station
 	public Optional<List<FireStation>> deleteMappingOfAStation(String stationNumber) {
 		try {
 			Optional<List<FireStation>> fireStationsToDelete = fireStationRepository.findByStation(stationNumber);
 			if (fireStationsToDelete.isPresent()) {
 				List<FireStation> listFireStationsToDelete = fireStationsToDelete.get();
+				
 				for (FireStation currentFireStation : listFireStationsToDelete) {
 					fireStationRepository.delete(currentFireStation);
 				}
@@ -79,6 +92,10 @@ public class FireStationService {
 		}
 		return Optional.empty();
 	}
+
+
+
+
 
 	// DELETE by address
 	public Optional<FireStation> deleteMappingOfAnAddress(String address) {

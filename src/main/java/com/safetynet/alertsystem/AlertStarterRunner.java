@@ -16,7 +16,6 @@ public class AlertStarterRunner implements CommandLineRunner {
 	public void run(String... args) throws Exception {
 		// Load data
 		readerJsonService.SaveJsonDataInDb();
-
 	}
 
 }

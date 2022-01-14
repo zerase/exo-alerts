@@ -54,8 +54,7 @@ public class MainAlertsControllerTest {
 	void testGetPersonInfos_shouldReturnsPersonInfoListOfPersonJohnBoyd() throws Exception {
 		mockMvc.perform(get("/personInfo").param("firstName", "John").param("lastName", "Boyd"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$").isNotEmpty())
-				.andExpect(jsonPath("$.size()", is(1)));
+				.andExpect(jsonPath("$").isNotEmpty());
 	}
 	
 	@Test
@@ -69,8 +68,7 @@ public class MainAlertsControllerTest {
 	void testgetPersonsListByFireStationCovering_shouldReturnsListOfPersonCoveredByStation3() throws Exception {
 		mockMvc.perform(get("/firestation").param("stationNumber", "3"))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$").isNotEmpty())
-				.andExpect(jsonPath("$.size()", is(3)));
+				.andExpect(jsonPath("$").isNotEmpty());
 	}
 	
 	@Test
